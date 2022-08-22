@@ -23,7 +23,7 @@ pub const BinaryReader = struct {
     }
 
     pub fn readBinary(self: *BinaryReader, len: usize) ?BinaryReader {
-        const idx = self.idx;
+        const idx = self.idx + self.baseAddr;
         const data = self.readSlice(len) orelse return null;
         //std.log.err("Read Binary: addr[{X}][{X}] => [{X}][{X}]", .{ idx, self.baseAddr + idx, self.idx, self.baseAddr + self.idx });
         return BinaryReader.init(data, idx);

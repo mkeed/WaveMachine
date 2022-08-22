@@ -180,14 +180,28 @@ pub fn decodeElementSection(data: *br.BinaryReader, run: *runnable.Runnable) !vo
     }
 }
 
+pub fn decodeFuncData(data: *br.BinaryReader, run: *runnable.Runnable) !void {
+    _ = data;
+    _ = run;
+    const localLen = data.read(u32) orelse return error.FileTooSmall;
+    var localCount: usize = 0;
+    std.log.err("func", .{});
+    while (localCount < localLen) : (localCount += 1) {
+        const n = data.read(u32) orelse return error.FileTooSmall;
+        const valtype = data.readByte() orelse return error.FileTooSmall;
+        std.log.err("funcLocal:[{}][{x}]", .{ n, valtype });
+    }
+    try expr.decode(data, run.allocator());
+}
+
 pub fn decodeCodeSection(data: *br.BinaryReader, run: *runnable.Runnable) !void {
     _ = run;
     const num_code = data.read(u32) orelse return error.FileTooSmall;
     var code_count: usize = 0;
     while (code_count < num_code) : (code_count += 1) {
-        const size = data.read(u32);
-        var funcData = data.readBinary(size);
-        decodeFuncData(funcData);
+        const size = data.read(u32) orelse return error.FileTooSmall;
+        var funcData = data.readBinary(size) orelse return error.FileTooSmall;
+        try decodeFuncData(&funcData, run);
     }
 }
 
