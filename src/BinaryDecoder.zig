@@ -1,7 +1,8 @@
 const std = @import("std");
-
 const runnable = @import("runnable.zig");
 const br = @import("BinaryReader.zig");
+const expr = @import("Expression.zig");
+
 const magicNumber = [4]u8{ 0x00, 0x61, 0x73, 0x6d };
 const versionNumber = [4]u8{ 0x01, 0x00, 0x00, 0x00 };
 
@@ -125,10 +126,11 @@ pub fn decodeGlobalSection(data: *br.BinaryReader, run: *runnable.Runnable) !voi
     while (global_count < num_global) : (global_count += 1) {
         const val_type = data.readByte() orelse return error.FileTooSmall;
         const mut = data.readByte() orelse return error.FileTooSmall;
-        while (data.readByte()) |val| {
-            std.log.err("Expr:{x}", .{val});
-            if (val == 0x0B) break;
-        }
+        try expr.decode(data, run.allocator());
+        //while (data.readByte()) |val| {
+        //std.log.err("Expr:{x}", .{val});
+        //if (val == 0x0B) break;
+        //}
         std.log.err("ValType:{x} Mut:{}", .{ val_type, mut });
     }
 }
