@@ -150,6 +150,47 @@ pub fn decodeExportSection(data: *br.BinaryReader, run: *runnable.Runnable) !voi
     }
 }
 
+pub fn decodeElementSection(data: *br.BinaryReader, run: *runnable.Runnable) !void {
+    _ = run;
+    _ = data;
+    const num_elems = data.read(u32) orelse return error.FileTooSmall;
+    std.log.err("Elements:{}", .{num_elems});
+    var elem_count: usize = 0;
+    while (elem_count < num_elems) : (elem_count += 1) {
+        const el_type = data.readByte() orelse return error.FileTooSmall;
+        switch (el_type) {
+            0 => {
+                try expr.decode(data, run.allocator());
+                const num_funcs = data.read(u32) orelse return error.FileTooSmall;
+                var func_count: usize = 0;
+                while (func_count < num_funcs) : (func_count += 1) {
+                    const funcidx = data.read(u32) orelse return error.FileTooSmall;
+                    std.log.err("func:{}", .{funcidx});
+                }
+                std.log.err("numFuncs:{}", .{num_funcs});
+            },
+            1, 2, 3, 4, 5, 6, 7 => {
+                return error.NotImplemented;
+            },
+            else => {
+                return error.InvalidByte;
+            },
+        }
+        std.log.err("ElementType:{}", .{el_type});
+    }
+}
+
+pub fn decodeCodeSection(data: *br.BinaryReader, run: *runnable.Runnable) !void {
+    _ = run;
+    const num_code = data.read(u32) orelse return error.FileTooSmall;
+    var code_count: usize = 0;
+    while (code_count < num_code) : (code_count += 1) {
+        const size = data.read(u32);
+        var funcData = data.readBinary(size);
+        decodeFuncData(funcData);
+    }
+}
+
 pub fn decode(file: *br.BinaryReader, alloc: std.mem.Allocator) !runnable.Runnable {
     if (false == std.mem.eql(u8, magicNumber[0..], file.readSlice(4) orelse return error.FileTooSmall)) return error.InvalidMagicNumber;
     if (false == std.mem.eql(u8, versionNumber[0..], file.readSlice(4) orelse return error.FileTooSmall)) return error.InvalidVersionNumber;
@@ -171,6 +212,8 @@ pub fn decode(file: *br.BinaryReader, alloc: std.mem.Allocator) !runnable.Runnab
             .Memory => try decodeMemorySection(&contents, &run),
             .Global => try decodeGlobalSection(&contents, &run),
             .Export => try decodeExportSection(&contents, &run),
+            .Element => try decodeElementSection(&contents, &run),
+            .Code => try decodeCodeSection(&contents, &run),
             else => {
                 std.log.err("Section: {} Len:{}", .{ id, size });
                 return error.NotImplemented;
