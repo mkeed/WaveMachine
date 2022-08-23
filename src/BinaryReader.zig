@@ -43,8 +43,8 @@ pub const BinaryReader = struct {
         var result: T = 0;
         var idx: usize = 0;
         while (true) {
-            if (self.idx + idx > self.data.len) {
-                //std.log.err("Invalid {} Read at addr[{X}][{X}]", .{ T, self.idx, self.baseAddr + self.idx });
+            if (self.idx + idx >= self.data.len) {
+                std.log.err("Invalid {} Read at addr[{X}][{X}] |[{x} => [{x}]]", .{ T, self.idx, self.baseAddr + self.idx, self.baseAddr, self.baseAddr + self.data.len });
                 return null;
             }
             const byte = self.data[idx + self.idx];
@@ -63,7 +63,7 @@ pub const BinaryReader = struct {
             self.idx += len;
         }
     }
-    pub fn left(self: *BinaryReader) usize {
+    pub fn left(self: BinaryReader) usize {
         return self.data.len - self.idx;
     }
     pub fn length(self: BinaryReader) usize {
@@ -71,6 +71,10 @@ pub const BinaryReader = struct {
     }
     pub fn readAddr(self: BinaryReader) usize {
         return self.idx + self.baseAddr;
+    }
+    pub fn nBytesOrEmpty(self: BinaryReader, len: usize) []const u8 {
+        const real_len = if (self.left() < len) self.left() else len;
+        return self.data[self.idx .. self.idx + real_len];
     }
 };
 

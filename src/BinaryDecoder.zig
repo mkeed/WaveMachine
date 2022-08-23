@@ -20,22 +20,6 @@ pub const TypeTag = enum(u8) {
     function = 0x60,
 };
 
-pub const SectionId = enum(u8) {
-    Custom = 0,
-    Type = 1,
-    Import = 2,
-    Function = 3,
-    Table = 4,
-    Memory = 5,
-    Global = 6,
-    Export = 7,
-    Start = 8,
-    Element = 9,
-    Code = 10,
-    Data = 11,
-    DataCount = 12,
-};
-
 pub fn decodeTypeSection(data: *br.BinaryReader, run: *runnable.Runnable) !void {
     const len = data.read(u32) orelse return error.Invalid;
     var count: usize = 0;
@@ -204,7 +188,23 @@ pub fn decodeCodeSection(data: *br.BinaryReader, run: *runnable.Runnable) !void 
         try decodeFuncData(&funcData, run);
     }
 }
-
+pub fn decodeDataSection(data: *br.BinaryReader, run: *runnable.Runnable) !void {
+    _ = run;
+    const num_data = data.read(u32) orelse return error.FileTooSmall;
+    var data_count: usize = 0;
+    while (data_count < num_data) : (data_count += 1) {
+        const data_type = data.readByte() orelse return error.FileTooSmall;
+        switch (data_type) {
+            0 => {
+                std.log.err("{}", .{std.fmt.fmtSliceHexUpper(data.nBytesOrEmpty(32))});
+                return error.NotImplemented;
+            },
+            1 => return error.NotImplemented,
+            2 => return error.NotImplemented,
+            else => return error.InvalidData,
+        }
+    }
+}
 pub fn decode(file: *br.BinaryReader, alloc: std.mem.Allocator) !runnable.Runnable {
     if (false == std.mem.eql(u8, magicNumber[0..], file.readSlice(4) orelse return error.FileTooSmall)) return error.InvalidMagicNumber;
     if (false == std.mem.eql(u8, versionNumber[0..], file.readSlice(4) orelse return error.FileTooSmall)) return error.InvalidVersionNumber;
@@ -228,6 +228,7 @@ pub fn decode(file: *br.BinaryReader, alloc: std.mem.Allocator) !runnable.Runnab
             .Export => try decodeExportSection(&contents, &run),
             .Element => try decodeElementSection(&contents, &run),
             .Code => try decodeCodeSection(&contents, &run),
+            .Data => try decodeDataSection(&contents, &run),
             else => {
                 std.log.err("Section: {} Len:{}", .{ id, size });
                 return error.NotImplemented;

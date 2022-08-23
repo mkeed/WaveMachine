@@ -218,11 +218,47 @@ const instr = enum(u8) {
     I64Extend32_2 = 0xC4,
 };
 
+pub const Instruction = union(enum) {
+    Nop: void,
+    Unreachable: void,
+};
+
+const do_logging = false;
+
+pub fn log(comptime str: []const u8, args: anytype) void {
+    std.log.err(str, args);
+}
+
+pub const ExpressionIterator = struct {
+    data: *br.Binaryreader,
+
+    pub fn next(self: *ExpressionIterator) !?Instruction {
+        const b = self.data.readByte() orelse return null;
+        const t = try std.meta.intToEnum(instr, b);
+        switch (t) {
+            .Unreachable => {
+                return .Unreachable;
+            },
+            .Nop => {
+                return .Nop;
+            },
+            else => {
+                return error.NotImpelemented;
+            },
+        }
+    }
+};
+
+pub fn iterator(data: *br.BinaryReader) ExpressionIterator {
+    return .{
+        .data = data,
+    };
+}
+
 pub fn decode(data: *br.BinaryReader, alloc: std.mem.Allocator) !void {
     _ = alloc;
+    const b: u8 = 0x0B;
     while (true) {
-        std.log.err("dataread", .{});
-        const b = data.readByte() orelse return error.TooSmall;
         if (b == 0x0B) {
             break;
         }
@@ -230,14 +266,14 @@ pub fn decode(data: *br.BinaryReader, alloc: std.mem.Allocator) !void {
         switch (t) {
             //MultiPurpose Instruction
             .Multi => {
-                std.log.err("Multi:", .{});
+                log("Multi:", .{});
                 return error.NotImplemented;
             },
             .Unreachable => {
-                std.log.err("Unreachable:", .{});
+                log("Unreachable:", .{});
             },
             .Nop => {
-                std.log.err("Nop:", .{});
+                log("Nop:", .{});
             },
             .Block => {
                 const blocktype = data.readByte() orelse return error.FileTooSmall;
@@ -249,7 +285,7 @@ pub fn decode(data: *br.BinaryReader, alloc: std.mem.Allocator) !void {
                     0x7C => "f64",
                     else => return error.NotImplemented,
                 };
-                std.log.err("Block:{s}", .{bval});
+                log("Block:{s}", .{bval});
                 while (data.readByte()) |byte| {
                     if (byte == 0x0B) break;
                 }
@@ -267,612 +303,612 @@ pub fn decode(data: *br.BinaryReader, alloc: std.mem.Allocator) !void {
                 while (data.readByte()) |byte| {
                     if (byte == 0x0B) break;
                 }
-                std.log.err("Loop:{s}", .{bval});
+                log("Loop:{s}", .{bval});
             },
             .IfElse => {
-                std.log.err("IfElse:", .{});
+                log("IfElse:", .{});
                 return error.NotImplemented;
             },
             .Branch => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("Branch:[{}]", .{idx});
+                log("Branch:[{}]", .{idx});
             },
             .BranchIf => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("BranchIf:[{}]", .{idx});
+                log("BranchIf:[{}]", .{idx});
             },
             .Return => {
-                std.log.err("Return:", .{});
+                log("Return:", .{});
             },
 
             .Call => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("Call:[{}]", .{idx});
+                log("Call:[{}]", .{idx});
             },
 
             .CallIndirect => {
                 const typeidx = data.read(u32) orelse return error.FileTooSmall;
                 const tableidx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("CallIndirect:[{}][{}]", .{ typeidx, tableidx });
+                log("CallIndirect:[{}][{}]", .{ typeidx, tableidx });
             },
             .RefNull => {
                 const reftype = data.readByte() orelse return error.FileTooSmall;
-                std.log.err("RefNull:[{}]", .{reftype});
+                log("RefNull:[{}]", .{reftype});
             },
             .RefIs_NULL => {
-                std.log.err("RefIs_NULL:", .{});
+                log("RefIs_NULL:", .{});
             },
             .RefFunc => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("RefFunc:[{}]", .{idx});
+                log("RefFunc:[{}]", .{idx});
             },
             .Drop => {
-                std.log.err("Drop:", .{});
+                log("Drop:", .{});
             },
             .Select => {
-                std.log.err("Select:", .{});
+                log("Select:", .{});
             },
             .SelectT => {
                 const num = data.read(u32) orelse return error.FileTooSmall;
                 var tcount: usize = 0;
-                std.log.err("SelectT:[{}]", .{num});
+                log("SelectT:[{}]", .{num});
                 while (tcount < num) : (tcount += 1) {
                     const valtype = data.readByte() orelse return error.FileTooSmall;
-                    std.log.err("valtype[{}]", .{valtype});
+                    log("valtype[{}]", .{valtype});
                 }
             },
             .LocalGet => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("LocalGet:[{}]", .{idx});
+                log("LocalGet:[{}]", .{idx});
             },
             .LocalSet => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("LocalSet:[{}]", .{idx});
+                log("LocalSet:[{}]", .{idx});
             },
             .LocalTee => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("LocalTee:[{}]", .{idx});
+                log("LocalTee:[{}]", .{idx});
             },
             .GlobalGet => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("GlobalGet:[{}]", .{idx});
+                log("GlobalGet:[{}]", .{idx});
             },
             .GlobalSet => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("GlobalSet:[{}]", .{idx});
+                log("GlobalSet:[{}]", .{idx});
             },
             .TableGet => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("TableGet:[{}]", .{idx});
+                log("TableGet:[{}]", .{idx});
             },
             .TableSet => {
                 const idx = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("TableSet:[{}]", .{idx});
+                log("TableSet:[{}]", .{idx});
             },
             .I32Load => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Load:[{}] =>[{}]", .{ alig, offset });
+                log("I32Load:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Load => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Load:[{}] =>[{}]", .{ alig, offset });
+                log("I64Load:[{}] =>[{}]", .{ alig, offset });
             },
             .F32Load => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("F32Load:[{}] =>[{}]", .{ alig, offset });
+                log("F32Load:[{}] =>[{}]", .{ alig, offset });
             },
             .F64Load => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("F64Load:[{}] =>[{}]", .{ alig, offset });
+                log("F64Load:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Loadi8 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Loadi8:[{}] =>[{}]", .{ alig, offset });
+                log("I32Loadi8:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Loadu8 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Loadu8:[{}] =>[{}]", .{ alig, offset });
+                log("I32Loadu8:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Loadi16 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Loadi16:[{}] =>[{}]", .{ alig, offset });
+                log("I32Loadi16:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Loadu16 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Loadu16:[{}] =>[{}]", .{ alig, offset });
+                log("I32Loadu16:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Loadi8 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Loadi8:[{}] =>[{}]", .{ alig, offset });
+                log("I64Loadi8:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Loadu8 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Loadu8:[{}] =>[{}]", .{ alig, offset });
+                log("I64Loadu8:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Loadi16 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Loadi16:[{}] =>[{}]", .{ alig, offset });
+                log("I64Loadi16:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Loadu16 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Loadu16:[{}] =>[{}]", .{ alig, offset });
+                log("I64Loadu16:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Loadi32 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Loadi32:[{}] =>[{}]", .{ alig, offset });
+                log("I64Loadi32:[{}] =>[{}]", .{ alig, offset });
             },
             .I64LoadU32 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64LoadU32:[{}] =>[{}]", .{ alig, offset });
+                log("I64LoadU32:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Store => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Store:[{}] =>[{}]", .{ alig, offset });
+                log("I32Store:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Store => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Store:[{}] =>[{}]", .{ alig, offset });
+                log("I64Store:[{}] =>[{}]", .{ alig, offset });
             },
             .F32Store => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("F32Store:[{}] =>[{}]", .{ alig, offset });
+                log("F32Store:[{}] =>[{}]", .{ alig, offset });
             },
             .F64Store => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("F64Store:[{}] =>[{}]", .{ alig, offset });
+                log("F64Store:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Store8 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Store8:[{}] =>[{}]", .{ alig, offset });
+                log("I32Store8:[{}] =>[{}]", .{ alig, offset });
             },
             .I32Store16 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I32Store16:[{}] =>[{}]", .{ alig, offset });
+                log("I32Store16:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Store8 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Store8:[{}] =>[{}]", .{ alig, offset });
+                log("I64Store8:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Store16 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Store16:[{}] =>[{}]", .{ alig, offset });
+                log("I64Store16:[{}] =>[{}]", .{ alig, offset });
             },
             .I64Store32 => {
                 const alig = data.read(u32) orelse return error.FileTooSmall;
                 const offset = data.read(u32) orelse return error.FileTooSmall;
-                std.log.err("I64Store32:[{}] =>[{}]", .{ alig, offset });
+                log("I64Store32:[{}] =>[{}]", .{ alig, offset });
             },
             .MemorySize => {
                 const val = data.readByte() orelse return error.FileTooSmall;
                 if (val != 0) return error.Invalid;
-                std.log.err("MemorySize:", .{});
+                log("MemorySize:", .{});
             },
             .MemoryGrow => {
                 const val = data.readByte() orelse return error.FileTooSmall;
                 if (val != 0) return error.Invalid;
-                std.log.err("MemoryGrow:", .{});
+                log("MemoryGrow:", .{});
             },
             .I32Const => {
                 const val = data.read(i32) orelse return error.FileTooSmall;
-                std.log.err("I32Const:[{}]", .{val});
+                log("I32Const:[{}]", .{val});
             },
             .I64Const => {
                 const val = data.read(i64) orelse return error.FileTooSmall;
-                std.log.err("I64Const:[{}]", .{val});
+                log("I64Const:[{}]", .{val});
             },
             .F32Const => {
-                std.log.err("F32Const:", .{});
+                log("F32Const:", .{});
                 return error.NotImplemented;
             },
             .F64Const => {
-                std.log.err("F64Const:", .{});
+                log("F64Const:", .{});
                 return error.NotImplemented;
             },
             .I32eqz => {
-                std.log.err("I32eqz:", .{});
+                log("I32eqz:", .{});
             },
             .I32ez => {
-                std.log.err("I32ez:", .{});
+                log("I32ez:", .{});
             },
             .I32ne => {
-                std.log.err("I32ne:", .{});
+                log("I32ne:", .{});
             },
             .I32lt_s => {
-                std.log.err("I32lt_s:", .{});
+                log("I32lt_s:", .{});
             },
             .I32lt_u => {
-                std.log.err("I32lt_u:", .{});
+                log("I32lt_u:", .{});
             },
             .I32gt_s => {
-                std.log.err("I32gt_s:", .{});
+                log("I32gt_s:", .{});
             },
             .I32gt_u => {
-                std.log.err("I32gt_u:", .{});
+                log("I32gt_u:", .{});
             },
             .I32le_s => {
-                std.log.err("I32le_s:", .{});
+                log("I32le_s:", .{});
             },
             .I32le_u => {
-                std.log.err("I32le_u:", .{});
+                log("I32le_u:", .{});
             },
             .I32ge_s => {
-                std.log.err("I32ge_s:", .{});
+                log("I32ge_s:", .{});
             },
             .I32ge_u => {
-                std.log.err("I32ge_u:", .{});
+                log("I32ge_u:", .{});
             },
             .I64eqz => {
-                std.log.err("I64eqz:", .{});
+                log("I64eqz:", .{});
             },
             .I64eq => {
-                std.log.err("I64eq:", .{});
+                log("I64eq:", .{});
             },
             .I64ne => {
-                std.log.err("I64ne:", .{});
+                log("I64ne:", .{});
             },
             .I64lt_s => {
-                std.log.err("I64lt_s:", .{});
+                log("I64lt_s:", .{});
             },
             .I64lt_u => {
-                std.log.err("I64lt_u:", .{});
+                log("I64lt_u:", .{});
             },
             .I64gt_s => {
-                std.log.err("I64gt_s:", .{});
+                log("I64gt_s:", .{});
             },
             .I64gt_u => {
-                std.log.err("I64gt_u:", .{});
+                log("I64gt_u:", .{});
             },
             .I64le_s => {
-                std.log.err("I64le_s:", .{});
+                log("I64le_s:", .{});
             },
             .I64le_u => {
-                std.log.err("I64le_u:", .{});
+                log("I64le_u:", .{});
             },
             .I64ge_s => {
-                std.log.err("I64ge_s:", .{});
+                log("I64ge_s:", .{});
             },
             .I64ge_u => {
-                std.log.err("I64ge_u:", .{});
+                log("I64ge_u:", .{});
             },
             .F32eq => {
-                std.log.err("F32eq:", .{});
+                log("F32eq:", .{});
             },
             .F32ne => {
-                std.log.err("F32ne:", .{});
+                log("F32ne:", .{});
             },
             .F32lt => {
-                std.log.err("F32lt:", .{});
+                log("F32lt:", .{});
             },
             .F32gt => {
-                std.log.err("F32gt:", .{});
+                log("F32gt:", .{});
             },
             .F32le => {
-                std.log.err("F32le:", .{});
+                log("F32le:", .{});
             },
             .F32ge => {
-                std.log.err("F32ge:", .{});
+                log("F32ge:", .{});
             },
             .F64eq => {
-                std.log.err("F64eq:", .{});
+                log("F64eq:", .{});
             },
             .F64ne => {
-                std.log.err("F64ne:", .{});
+                log("F64ne:", .{});
             },
             .F64lt => {
-                std.log.err("F64lt:", .{});
+                log("F64lt:", .{});
             },
             .F64gt => {
-                std.log.err("F64gt:", .{});
+                log("F64gt:", .{});
             },
             .F64le => {
-                std.log.err("F64le:", .{});
+                log("F64le:", .{});
             },
             .F64ge => {
-                std.log.err("F64ge:", .{});
+                log("F64ge:", .{});
             },
             .I32clz => {
-                std.log.err("I32clz:", .{});
+                log("I32clz:", .{});
             },
             .I32ctz => {
-                std.log.err("I32ctz:", .{});
+                log("I32ctz:", .{});
             },
             .I32popcnt => {
-                std.log.err("I32popcnt:", .{});
+                log("I32popcnt:", .{});
             },
             .I32Add => {
-                std.log.err("I32Add:", .{});
+                log("I32Add:", .{});
             },
             .I32Sub => {
-                std.log.err("I32Sub:", .{});
+                log("I32Sub:", .{});
             },
             .I32Mul => {
-                std.log.err("I32Mul:", .{});
+                log("I32Mul:", .{});
             },
             .I32div_s => {
-                std.log.err("I32div_s:", .{});
+                log("I32div_s:", .{});
             },
             .I32div_u => {
-                std.log.err("I32div_u:", .{});
+                log("I32div_u:", .{});
             },
             .I32rem_s => {
-                std.log.err("I32rem_s:", .{});
+                log("I32rem_s:", .{});
             },
             .I32rem_u => {
-                std.log.err("I32rem_u:", .{});
+                log("I32rem_u:", .{});
             },
             .I32and => {
-                std.log.err("I32and:", .{});
+                log("I32and:", .{});
             },
             .I32or => {
-                std.log.err("I32or:", .{});
+                log("I32or:", .{});
             },
             .I32xor => {
-                std.log.err("I32xor:", .{});
+                log("I32xor:", .{});
             },
             .I32shl => {
-                std.log.err("I32shl:", .{});
+                log("I32shl:", .{});
             },
             .I32shr_s => {
-                std.log.err("I32shr_s:", .{});
+                log("I32shr_s:", .{});
             },
             .I32shr_u => {
-                std.log.err("I32shr_u:", .{});
+                log("I32shr_u:", .{});
             },
             .I32rotl => {
-                std.log.err("I32rotl:", .{});
+                log("I32rotl:", .{});
             },
             .I32rotr => {
-                std.log.err("I32rotr:", .{});
+                log("I32rotr:", .{});
             },
             .I64clz => {
-                std.log.err("I64clz:", .{});
+                log("I64clz:", .{});
             },
             .I64ctz => {
-                std.log.err("I64ctz:", .{});
+                log("I64ctz:", .{});
             },
             .I64popcnt => {
-                std.log.err("I64popcnt:", .{});
+                log("I64popcnt:", .{});
             },
             .I64add => {
-                std.log.err("I64add:", .{});
+                log("I64add:", .{});
             },
             .I64sub => {
-                std.log.err("I64sub:", .{});
+                log("I64sub:", .{});
             },
             .I64mul => {
-                std.log.err("I64mul:", .{});
+                log("I64mul:", .{});
             },
             .I64div_s => {
-                std.log.err("I64div_s:", .{});
+                log("I64div_s:", .{});
             },
             .I64div_u => {
-                std.log.err("I64div_u:", .{});
+                log("I64div_u:", .{});
             },
             .I64rem_s => {
-                std.log.err("I64rem_s:", .{});
+                log("I64rem_s:", .{});
             },
             .I64rem_u => {
-                std.log.err("I64rem_u:", .{});
+                log("I64rem_u:", .{});
             },
             .I64and => {
-                std.log.err("I64and:", .{});
+                log("I64and:", .{});
             },
             .I64or => {
-                std.log.err("I64or:", .{});
+                log("I64or:", .{});
             },
             .I64xor => {
-                std.log.err("I64xor:", .{});
+                log("I64xor:", .{});
             },
             .I64shl => {
-                std.log.err("I64shl:", .{});
+                log("I64shl:", .{});
             },
             .I64shr_s => {
-                std.log.err("I64shr_s:", .{});
+                log("I64shr_s:", .{});
             },
             .I64shr_u => {
-                std.log.err("I64shr_u:", .{});
+                log("I64shr_u:", .{});
             },
             .I64rotl => {
-                std.log.err("I64rotl:", .{});
+                log("I64rotl:", .{});
             },
             .I64rotr => {
-                std.log.err("I64rotr:", .{});
+                log("I64rotr:", .{});
             },
             .F32abs => {
-                std.log.err("F32abs:", .{});
+                log("F32abs:", .{});
             },
             .F32neg => {
-                std.log.err("F32neg:", .{});
+                log("F32neg:", .{});
             },
             .F32ceil => {
-                std.log.err("F32ceil:", .{});
+                log("F32ceil:", .{});
             },
             .F32floor => {
-                std.log.err("F32floor:", .{});
+                log("F32floor:", .{});
             },
             .F32trunc => {
-                std.log.err("F32trunc:", .{});
+                log("F32trunc:", .{});
             },
             .F32neareset => {
-                std.log.err("F32neareset:", .{});
+                log("F32neareset:", .{});
             },
             .F32sqrt => {
-                std.log.err("F32sqrt:", .{});
+                log("F32sqrt:", .{});
             },
             .F32add => {
-                std.log.err("F32add:", .{});
+                log("F32add:", .{});
             },
             .F32sub => {
-                std.log.err("F32sub:", .{});
+                log("F32sub:", .{});
             },
             .F32mul => {
-                std.log.err("F32mul:", .{});
+                log("F32mul:", .{});
             },
             .F32div => {
-                std.log.err("F32div:", .{});
+                log("F32div:", .{});
             },
             .F32min => {
-                std.log.err("F32min:", .{});
+                log("F32min:", .{});
             },
             .F32max => {
-                std.log.err("F32max:", .{});
+                log("F32max:", .{});
             },
             .F32copysign => {
-                std.log.err("F32copysign:", .{});
+                log("F32copysign:", .{});
             },
             .F64abs => {
-                std.log.err("F64abs:", .{});
+                log("F64abs:", .{});
             },
             .F64neg => {
-                std.log.err("F64neg:", .{});
+                log("F64neg:", .{});
             },
             .F64ceil => {
-                std.log.err("F64ceil:", .{});
+                log("F64ceil:", .{});
             },
             .F64floor => {
-                std.log.err("F64floor:", .{});
+                log("F64floor:", .{});
             },
             .F64trunc => {
-                std.log.err("F64trunc:", .{});
+                log("F64trunc:", .{});
             },
             .F64neareset => {
-                std.log.err("F64neareset:", .{});
+                log("F64neareset:", .{});
             },
             .F64sqrt => {
-                std.log.err("F64sqrt:", .{});
+                log("F64sqrt:", .{});
             },
             .F64add => {
-                std.log.err("F64add:", .{});
+                log("F64add:", .{});
             },
             .F64sub => {
-                std.log.err("F64sub:", .{});
+                log("F64sub:", .{});
             },
             .F64mul => {
-                std.log.err("F64mul:", .{});
+                log("F64mul:", .{});
             },
             .F64div => {
-                std.log.err("F64div:", .{});
+                log("F64div:", .{});
             },
             .F64min => {
-                std.log.err("F64min:", .{});
+                log("F64min:", .{});
             },
             .F64max => {
-                std.log.err("F64max:", .{});
+                log("F64max:", .{});
             },
             .F64copysign => {
-                std.log.err("F64copysign:", .{});
+                log("F64copysign:", .{});
             },
             .I32wrapI64 => {
-                std.log.err("I32wrapI64:", .{});
+                log("I32wrapI64:", .{});
             },
             .I32truncF32_s => {
-                std.log.err("I32truncF32_s:", .{});
+                log("I32truncF32_s:", .{});
             },
             .I32truncF32_u => {
-                std.log.err("I32truncF32_u:", .{});
+                log("I32truncF32_u:", .{});
             },
             .I32truncF64_s => {
-                std.log.err("I32truncF64_s:", .{});
+                log("I32truncF64_s:", .{});
             },
             .I32truncF64_u => {
-                std.log.err("I32truncF64_u:", .{});
+                log("I32truncF64_u:", .{});
             },
             .I64extendi32_s => {
-                std.log.err("I64extendi32_s:", .{});
+                log("I64extendi32_s:", .{});
             },
             .I64extendi32_u => {
-                std.log.err("I64extendi32_u:", .{});
+                log("I64extendi32_u:", .{});
             },
             .I64truncf32_s => {
-                std.log.err("I64truncf32_s:", .{});
+                log("I64truncf32_s:", .{});
             },
             .I64truncf32_u => {
-                std.log.err("I64truncf32_u:", .{});
+                log("I64truncf32_u:", .{});
             },
             .I64truncf64_s => {
-                std.log.err("I64truncf64_s:", .{});
+                log("I64truncf64_s:", .{});
             },
             .I64truncf64_u => {
-                std.log.err("I64truncf64_u:", .{});
+                log("I64truncf64_u:", .{});
             },
             .F32convert_i32_s => {
-                std.log.err("F32convert_i32_s:", .{});
+                log("F32convert_i32_s:", .{});
             },
             .F32convert_i32_u => {
-                std.log.err("F32convert_i32_u:", .{});
+                log("F32convert_i32_u:", .{});
             },
             .F32convert_i64_s => {
-                std.log.err("F32convert_i64_s:", .{});
+                log("F32convert_i64_s:", .{});
             },
             .F32convert_i64_u => {
-                std.log.err("F32convert_i64_u:", .{});
+                log("F32convert_i64_u:", .{});
             },
             .F32demoteF64 => {
-                std.log.err("F32demoteF64:", .{});
+                log("F32demoteF64:", .{});
             },
             .F64convert_i32_s => {
-                std.log.err("F64convert_i32_s:", .{});
+                log("F64convert_i32_s:", .{});
             },
             .F64convert_i32_u => {
-                std.log.err("F64convert_i32_u:", .{});
+                log("F64convert_i32_u:", .{});
             },
             .F64convert_i64_s => {
-                std.log.err("F64convert_i64_s:", .{});
+                log("F64convert_i64_s:", .{});
             },
             .F64convert_i64_u => {
-                std.log.err("F64convert_i64_u:", .{});
+                log("F64convert_i64_u:", .{});
             },
             .F64promoteF32 => {
-                std.log.err("F64promoteF32:", .{});
+                log("F64promoteF32:", .{});
             },
             .I32reinterpetf32 => {
-                std.log.err("I32reinterpetf32:", .{});
+                log("I32reinterpetf32:", .{});
             },
             .I64reinterpretf64 => {
-                std.log.err("I64reinterpretf64:", .{});
+                log("I64reinterpretf64:", .{});
             },
             .F32reinterpreti32 => {
-                std.log.err("F32reinterpreti32:", .{});
+                log("F32reinterpreti32:", .{});
             },
             .F64reinterpreti64 => {
-                std.log.err("F64reinterpreti64:", .{});
+                log("F64reinterpreti64:", .{});
             },
             .I32Extend8_s => {
-                std.log.err("I32Extend8_s:", .{});
+                log("I32Extend8_s:", .{});
             },
             .I32Extend16_s => {
-                std.log.err("I32Extend16_s:", .{});
+                log("I32Extend16_s:", .{});
             },
             .I64Extend8_s => {
-                std.log.err("I64Extend8_s:", .{});
+                log("I64Extend8_s:", .{});
             },
             .I64Extend16_s => {
-                std.log.err("I64Extend16_s:", .{});
+                log("I64Extend16_s:", .{});
             },
             .I64Extend32_2 => {
-                std.log.err("I64Extend32_2:", .{});
+                log("I64Extend32_2:", .{});
             },
         }
     }
